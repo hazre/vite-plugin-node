@@ -85,13 +85,13 @@ export const createMiddleware = async (
     app = await app;
     return app;
   }
-  
+
   if (!requestHandler) {
     const errorMessage = `${PLUGIN_NAME} Failed to find a valid request handler for adapter: ${config.adapter}`;
     logger.error(errorMessage);
     throw new Error(errorMessage);
   }
-  
+
   if (config.initAppOnBoot) {
     server.httpServer!.once('listening', async () => {
       let appOnBoot;
@@ -104,12 +104,12 @@ export const createMiddleware = async (
         );
         return;
       }
-  
+
       if (appOnBoot) {
         if (
-          config.adapter === 'nest' &&
-          typeof (appOnBoot as any).init === 'function' &&
-          !(appOnBoot as any).isInitialized
+          config.adapter === 'nest'
+          && typeof (appOnBoot as any).init === 'function'
+          && !(appOnBoot as any).isInitialized
         ) {
           try {
             logger.info(
@@ -133,7 +133,7 @@ export const createMiddleware = async (
       }
     });
   }
-  
+
   return async function viteNodeMiddleware(
     req: IncomingMessage,
     res: ServerResponse,
