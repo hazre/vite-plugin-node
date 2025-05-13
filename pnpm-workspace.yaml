@@ -2,10 +2,11 @@ packages:
   - examples/**
   - packages/**
   - '!**/test/**'
+catalog:
+  vite: '>=5.0.0'
 onlyBuiltDependencies:
   - '@apollo/protobufjs'
   - '@nestjs/core'
   - '@swc/core'
   - esbuild
-catalog:
-  vite: ^6.2.2
+  - unrs-resolver
