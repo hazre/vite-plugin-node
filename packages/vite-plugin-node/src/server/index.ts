@@ -1,6 +1,4 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { exit } from 'process';
-import chalk from 'chalk';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import type {
   ConfigEnv,
   Connect,
@@ -14,6 +12,8 @@ import type {
   ViteConfig,
   VitePluginNodeConfig,
 } from '..';
+import { exit } from 'node:process';
+import chalk from 'chalk';
 import {
   PLUGIN_NAME,
 } from '..';
@@ -21,8 +21,8 @@ import { createDebugger } from '../utils';
 import { ExpressHandler } from './express';
 import { FastifyHandler } from './fastify';
 import { KoaHandler } from './koa';
-import { NestHandler } from './nest';
 import { MarbleHandler } from './marble';
+import { NestHandler } from './nest';
 
 export const debugServer = createDebugger('vite:node-plugin:server');
 
@@ -36,9 +36,7 @@ export const SUPPORTED_FRAMEWORKS = {
 
 const env: ConfigEnv = { command: 'serve', mode: '' };
 
-export const getPluginConfig = async (
-  server: ViteDevServer,
-): Promise<VitePluginNodeConfig> => {
+export async function getPluginConfig(server: ViteDevServer): Promise<VitePluginNodeConfig> {
   const plugin = server.config.plugins.find(
     p => p.name === PLUGIN_NAME,
   ) as Plugin;
@@ -52,22 +50,18 @@ export const getPluginConfig = async (
 
   console.error('Please setup VitePluginNode in your vite.config.js first');
   exit(1);
-};
+}
 
-const getRequestHandler = (
-  handler: RequestAdapterOption,
-): RequestAdapter | undefined => {
+function getRequestHandler(handler: RequestAdapterOption): RequestAdapter | undefined {
   if (typeof handler === 'function') {
     debugServer(chalk.dim`using custom server handler`);
     return handler;
   }
   debugServer(chalk.dim`creating ${handler} node server`);
   return SUPPORTED_FRAMEWORKS[handler] as RequestAdapter;
-};
+}
 
-export const createMiddleware = async (
-  server: ViteDevServer,
-): Promise<Connect.HandleFunction> => {
+export async function createMiddleware(server: ViteDevServer): Promise<Connect.HandleFunction> {
   const config = await getPluginConfig(server);
   const logger = server.config.logger;
   const requestHandler = getRequestHandler(config.adapter);
@@ -165,4 +159,4 @@ export const createMiddleware = async (
       }
     }
   };
-};
+}

@@ -1,19 +1,9 @@
-{
-  "root": true,
-  "extends": [
-    "@antfu"
-  ],
-  "rules": {
-    "semi": [
-      "error",
-      "always"
-    ],
-    "@typescript-eslint/semi": [
-      "error",
-      "always"
-    ],
-    "indent": "off",
-    "@typescript-eslint/indent": [
+import antfu from '@antfu/eslint-config'
+
+export default antfu({
+  rules: {
+    'style/semi': ['error', 'always'],
+    "style/indent": [
       "error",
       2,
       {
@@ -32,8 +22,7 @@
         "asyncArrow": "always"
       }
     ],
-    "brace-style": "off",
-    "@typescript-eslint/brace-style": [
+    "style/brace-style": [
       "error",
       "1tbs",
       {
@@ -41,4 +30,4 @@
       }
     ]
   }
-}
+})

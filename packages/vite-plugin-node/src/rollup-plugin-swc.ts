@@ -1,6 +1,6 @@
-import { createFilter } from '@rollup/pluginutils';
 import type { Compiler, Options } from '@swc/core';
 import type { Plugin } from 'vite';
+import { createFilter } from '@rollup/pluginutils';
 import { cleanUrl } from './utils';
 
 export function RollupPluginSwc(options: Options): Plugin {

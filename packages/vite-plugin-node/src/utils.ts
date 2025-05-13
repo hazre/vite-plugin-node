@@ -12,8 +12,9 @@ export function createDebugger(ns: string) {
 export const queryRE = /\?.*$/;
 export const hashRE = /#.*$/;
 
-export const cleanUrl = (url: string) =>
-  url.replace(hashRE, '').replace(queryRE, '');
+export function cleanUrl(url: string) {
+  return url.replace(hashRE, '').replace(queryRE, '');
+}
 
 export function isObject(item: any): item is object {
   return (item && typeof item === 'object' && !Array.isArray(item));

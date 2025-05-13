@@ -1,5 +1,5 @@
-import type { IncomingMessage, ServerResponse } from 'http';
 import type { Options } from '@swc/core';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Connect, UserConfig, ViteDevServer } from 'vite';
 
 export { RollupPluginSwc } from './rollup-plugin-swc';
