@@ -71,40 +71,98 @@ export const createMiddleware = async (
   const config = await getPluginConfig(server);
   const logger = server.config.logger;
   const requestHandler = getRequestHandler(config.adapter);
-
   async function _loadApp(config: VitePluginNodeConfig) {
     const appModule = await server.ssrLoadModule(config.appPath);
     let app = appModule[config.exportName!];
     if (!app) {
       logger.error(
-        `Failed to find a named export ${config.exportName} from ${config.appPath}`,
+        `${PLUGIN_NAME} Failed to find a named export ${config.exportName} from ${config.appPath}`,
       );
-      process.exit(1);
-    } else {
-      // some app may be created with a function returning a promise
-      app = await app;
-      return app;
+      throw new Error(
+        `${PLUGIN_NAME} Failed to find a named export ${config.exportName} from ${config.appPath}`,
+      );
     }
+    app = await app;
+    return app;
   }
-
+  
   if (!requestHandler) {
-    console.error('Failed to find a request handler');
-    process.exit(1);
+    const errorMessage = `${PLUGIN_NAME} Failed to find a valid request handler for adapter: ${config.adapter}`;
+    logger.error(errorMessage);
+    throw new Error(errorMessage);
   }
-
+  
   if (config.initAppOnBoot) {
     server.httpServer!.once('listening', async () => {
-      await _loadApp(config);
+      let appOnBoot;
+      try {
+        appOnBoot = await _loadApp(config);
+      } catch (loadError) {
+        logger.error(
+          `${PLUGIN_NAME} Failed to load application module on boot.`,
+          { error: loadError instanceof Error ? loadError : new Error(String(loadError)) },
+        );
+        return;
+      }
+  
+      if (appOnBoot) {
+        if (
+          config.adapter === 'nest' &&
+          typeof (appOnBoot as any).init === 'function' &&
+          !(appOnBoot as any).isInitialized
+        ) {
+          try {
+            logger.info(
+              `${PLUGIN_NAME} Initializing NestJS application on boot...`,
+            );
+            await (appOnBoot as any).init();
+            logger.info(
+              `${PLUGIN_NAME} NestJS application initialized on boot.`,
+            );
+          } catch (initError) {
+            logger.error(
+              `${PLUGIN_NAME} Failed to initialize NestJS application on boot.`,
+              { error: initError instanceof Error ? initError : new Error(String(initError)) },
+            );
+          }
+        }
+      } else {
+        logger.warn(
+          `${PLUGIN_NAME} Application module loaded on boot, but the exported app was not found or was undefined.`,
+        );
+      }
     });
   }
-
-  return async function (
+  
+  return async function viteNodeMiddleware(
     req: IncomingMessage,
     res: ServerResponse,
     next: Connect.NextFunction,
   ): Promise<void> {
-    const app = await _loadApp(config);
-    if (app)
-      await requestHandler({ app, server, req, res, next });
+    try {
+      const app = await _loadApp(config);
+      if (app) {
+        await requestHandler({ app, server, req, res, next });
+      } else {
+        const errorMsg = `${PLUGIN_NAME} Application instance could not be resolved for the request.`;
+        logger.error(errorMsg);
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.end(errorMsg);
+        } else {
+          next(new Error(errorMsg));
+        }
+      }
+    } catch (error) {
+      logger.error(`${PLUGIN_NAME} Error during request processing:`, {
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+      if (!res.headersSent) {
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+      } else {
+        next(error);
+      }
+    }
   };
 };
