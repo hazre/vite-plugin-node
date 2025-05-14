@@ -1,5 +1,6 @@
-import type { Plugin, UserConfig } from 'vite';
+import type { ModuleNode, Plugin, UserConfig, ViteDevServer } from 'vite';
 import type { VitePluginNodeConfig } from '.';
+import chalk from 'chalk';
 import { PLUGIN_NAME } from '.';
 import { RollupPluginSwc } from './rollup-plugin-swc';
 import { createMiddleware } from './server';
@@ -49,7 +50,7 @@ export function VitePluginNode(cfg: VitePluginNodeConfig): Plugin[] {
             },
           },
           server: {
-            hmr: false,
+            hmr: true,
           },
           optimizeDeps: {
             noDiscovery: true,
@@ -69,6 +70,39 @@ export function VitePluginNode(cfg: VitePluginNodeConfig): Plugin[] {
       },
       configureServer: async (server) => {
         server.middlewares.use(await createMiddleware(server));
+      },
+      handleHotUpdate: async ({ server, modules: _modules, timestamp: _timestamp }: { server: ViteDevServer, modules: ModuleNode[], timestamp: number }) => {
+        const logger = server.config.logger;
+
+        console.warn(`[${PLUGIN_NAME}] HMR: 'handleHotUpdate' triggered. Scheduling full server restart.`);
+        logger.info(
+          chalk.greenBright(`[${PLUGIN_NAME}] HMR: File change detected. Scheduling server restart...`),
+        );
+
+        if (server.ws) {
+          server.ws.send({
+            type: 'full-reload',
+            path: '*',
+          });
+        }
+
+        // Schedule the restart for the next tick
+        setTimeout(async () => {
+          try {
+            logger.info(chalk.yellow(`[${PLUGIN_NAME}] Executing scheduled server restart...`));
+            await server.restart();
+            logger.info(chalk.greenBright(`[${PLUGIN_NAME}] Server restart command issued successfully.`));
+          } catch (error) {
+            // This catch is for errors during the scheduled server.restart() itself.
+            logger.error(`[${PLUGIN_NAME}] Error during scheduled server.restart():`, {
+              error: error instanceof Error ? error : new Error(String(error)),
+            });
+          }
+        }, 0); // 0ms delay to push to next event loop tick
+
+        // Signal that this plugin has handled the modules for this HMR event
+        // (by scheduling a restart), so Vite shouldn't process them further in the current sync cycle.
+        return [];
       },
     },
   ];
